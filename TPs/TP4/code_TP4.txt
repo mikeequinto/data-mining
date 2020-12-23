@@ -11,7 +11,7 @@
 ## Exact call for Default Classifier
 ## runAnalysis("investing_program_prediction_data.csv", c("numeric", "character", rep("numeric", 7), rep("character", 15), rep("character", 3), "character"), defaultClassifier, 28)
 
-## Exact call for Naive Bayes final modèle
+## Exact call for Naive Bayes final modÃ¨le
 ## runAnalysis("investing_program_prediction_data.csv", c("numeric", "character", rep("numeric", 7), rep("character", 15), rep("character", 3), "character"), naiveBayes_finalModel, 28)
 
 
@@ -52,7 +52,7 @@ runAnalysis <- function(datasetName,colClassesParams, methodName, ClassAttribute
   
   if(as.character(substitute(methodName)) == "naiveBayes_finalModel"){
     
-    ## Si on veut juste obtenir le modèle final
+    ## Si on veut juste obtenir le modÃ¨le final
     nbFinalModel <- naiveBayes(as.factor(InvType)~.,data=dataset)
     nbFinalModel
     
@@ -79,7 +79,7 @@ runAnalysis <- function(datasetName,colClassesParams, methodName, ClassAttribute
       #(actually the rest of the data)
       testData <- dataset[-trainIndex,]
       
-      print(paste("Nombre d'instances dans le testData à classer : ", dim(testData)[1]))
+      print(paste("Nombre d'instances dans le testData Ã  classer : ", dim(testData)[1]))
       
       if(as.character(substitute(methodName)) == "defaultClassifier"){
         
@@ -108,11 +108,11 @@ runAnalysis <- function(datasetName,colClassesParams, methodName, ClassAttribute
       
       #Get the Number of Correct
       numCorrect <- length(which(CorrectWrong))
-      print(paste("Nombre d'instances correctement classées : ", numCorrect))
+      print(paste("Nombre d'instances correctement classÃ©es : ", numCorrect))
       
       #Get the accuracy, i.e. the % of correct
       accuracy <- numCorrect/dim(testData)[1]
-      print(paste("Pourcentage d'instances bien classées : ", accuracy))
+      print(paste("Pourcentage d'instances bien classÃ©es : ", accuracy))
       
       #Add Number of correct and accuracy
       #To get average
@@ -131,8 +131,8 @@ runAnalysis <- function(datasetName,colClassesParams, methodName, ClassAttribute
     AverageAccuracy = AverageAccuracy / 5
     
     ## Display average number of correct / accuracy
-    print(paste("Moyenne d'instances correctement classés : ", AverageCorrect))
-    print(paste("Moyenne de précision pour l'algorithme", as.character(substitute(methodName)), " : ", AverageAccuracy))
+    print(paste("Moyenne d'instances correctement classÃ©s : ", AverageCorrect))
+    print(paste("Moyenne de prÃ©cision pour l'algorithme", as.character(substitute(methodName)), " : ", AverageAccuracy))
     
     
   }

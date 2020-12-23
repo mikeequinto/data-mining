@@ -1,6 +1,6 @@
 ## TP 4 Naive Bayes
 
-## setwd("C:/HEG/Data-mining/TPs/TP4")
+## setwd("D:/School/HEG/Data-mining/TPs/TP4")
 
 ## colClassesParams <- c("numeric", "character", rep("numeric", 7), rep("character", 15), rep("character", 3), "character")
 ## myData <- read.table("investing_program_prediction_data.csv", header=TRUE, sep=",", colClasses=colClassesParams)
@@ -25,17 +25,21 @@
 ### barplot(prop.table(nb$apriori), main="Prior distribution of the class attribute InvType")
 
 ## Conditional distribution for discrete attributes
-### barplot(prop.table(nb$tables$SE2), legend=T, main="Conditional distribution of SE2")
-### barplot(prop.table(nb$tables$IA3), legend=T, main="Conditional distribution of IA3")
-### barplot(prop.table(nb$tables$PE10), legend=T, main="Conditional distribution of PE10")
+### barplot(prop.table(t(nb$tables$IA3),2), legend=T, main="Conditional probability of IA3 given InvType P(IA3 | InvType)")
+### barplot(prop.table(t(nb$tables$PE10),2), legend=T, main="Conditional probability of PE10 given InvType P(PE10 | InvType)")
+
+## Mean of SE1 given invType = C0
+### mean.SE1.C0 <- nb$tables$SE1[1,1]
+## Standard deviation of SE1 given invType = C0
+### sd.SE1.C0 <- nb$tables$SE1[1,2] 
 
 ## Gaussian distribution for SE1
-### mean.SE1.C0 --> mean of SE1 given invType = C0
-### sd.SE1.C0 <- nb$tables$SE1[1,2] 
-### x <- myData[myData[,28]=="C0",1]
-### y <- dnorm(x, mean.SE1.C0, sd.SE1.C0)
-### plot(x,y, xlab="SE1", ylab="probability of SE1", main="Gaussian distribution of SE1 given InvType=C0")
+### x.SE1.C0 <- myData[myData[,28]=="C0",1]
+### y.SE1.C0 <- dnorm(x.SE1.C0, mean.SE1.C0, sd.SE1.C0)
+### plot(x.SE1.C0,y.SE1.C0, xlab="SE1", ylab="probability of SE1", main="Gaussian distribution of SE1 given InvType=C0")
 
+## Get a random instance from dataset
+### myData[sample(nrow(myData), 1), ]
 
 runAnalysis <- function(datasetName,colClassesParams, methodName, ClassAttributeIndex){
   
