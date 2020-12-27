@@ -2,11 +2,13 @@
 
 ## setwd("F:/School/HEG/Data-mining/TPs/Final project")
 
-## colClassesParams <- c("numeric", "factor", rep("numeric", 7), rep("factor", 15), rep("factor", 3), "factor")
-## myData <- read.table("investing_program_prediction_data.csv", header=TRUE, sep=",", colClasses=colClassesParams)
+## Data preparation
 
-## datasetName <- "investing_program_prediction_data.csv"
-## discreteAttributes <- c(2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27)
+### colClassesParams <- c("numeric", "factor", rep("numeric", 7), rep("factor", 15), rep("factor", 3), "factor")
+### myData <- read.table("investing_program_prediction_data.csv", header=TRUE, sep=",", colClasses=colClassesParams)
+
+### datasetName <- "investing_program_prediction_data.csv"
+### discreteAttributes <- c(2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27)
 
 ## Exact call
 ### runAnalysis(datasetName, colClassesParams, discreteAttributes, 28)
@@ -40,31 +42,35 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAtt
   
   ## Utilities
   source('utilities/utilities.R', chdir = TRUE)
+  source('utilities/knn.R', chdir = TRUE)
   
   ##Cette option permet d'afficher les valeurs réelles
   ##au lieu des notations scientifiques
   #options(scipen=999)
   
+  #print(colClassesParams)
+  
   ## Read data
   dataset<- read.table(datasetName,header=T,sep=",", colClasses=colClassesParams)
   
   ## Normalized data
-  #datasetNormalized <- normalizeDataset(dataset, discreteAttributes, ClassAttributeIndex)
+  datasetNormalized <- normalizeDataset(dataset, discreteAttributes, ClassAttributeIndex)
   
   ## Decision Tree using information gain
-  print("Results for Decision Tree using information gain")
-  execute_dt(dataset,'information', ClassAttributeIndex)
+  #print("Results for Decision Tree using information gain")
+  #execute_dt(dataset,'information', ClassAttributeIndex)
+  
+  #print("")
+  
+  ## Decision Tree using gini index
+  #print("Results for Decision Tree using gini index")
+  #execute_dt(dataset,'gini', ClassAttributeIndex)
   
   print("")
   
-  ## Decision Tree using gini index
-  print("Results for Decision Tree using gini index")
-  execute_dt(dataset,'gini', ClassAttributeIndex)
-  
-  
   ## KNN
-  #print("Results for KNN")
-  #execute_knn(datasetNormalized, ClassAttributeIndex)
+  print("Results for KNN")
+  execute_knn(datasetNormalized, ClassAttributeIndex)
   
 }
 
@@ -87,13 +93,23 @@ execute_knn <- function(datasetNormalized, ClassAttributeIndex){
                                           ClassAttributeIndex,,,,k)
     
     ## Display average accuracy
-    print(paste("Average accuracy for k = ",k," : ",averageAccuracy))
+    print(paste("Average accuracy for k = ",kValues[k]," : ",averageAccuracy))
     
     ## Set best accuracy combination
     if(averageAccuracy > bestAccuracy){
       bestAccuracy = averageAccuracy
       bestAccuracyKValue = k
     }
+    
+    ## Visualizing knn for each value of k
+    
+    ### For this we need to choose 2 continuous attributes
+    index1 = which(colnames(datasetNormalized)=="BA3") ## BA3
+    index2 = which(colnames(datasetNormalized)=="BA6") ## BA6
+    
+    ### visualizeKNN is a function from knn.R
+    visualizeKNN(datasetNormalized,index1,index2,kValues[k], 100)
+    
   }
     
 }
@@ -117,6 +133,7 @@ execute_dt <- function(dataset, selection, ClassAttributeIndex){
   for(x in 1:length(minSplits)){
     for(y in 1:length(cps)){
       
+      ## Get average accuracy for current combination
       averageAccuracy <- getAverageAccuracy("decisionTree",dataset,
                                             ClassAttributeIndex,selection,
                                             minSplits[x],cps[y],)
@@ -131,6 +148,19 @@ execute_dt <- function(dataset, selection, ClassAttributeIndex){
         bestAccuracyMinsplit = minSplits[x]
         bestAccuracyCp = cps[y]
       }
+      
+      ## Visualize Decision Tree for current combination
+      
+      ### Get formula name
+      formulaName <- getFormulaName(dataset, ClassAttributeIndex)
+      
+      ### Train a Decision Tree for current combination using whole dataset
+      model <- rpart(formula=as.formula(formulaName), 
+                     data=dataset, parms=list(split=selection), 
+                     minsplit=minSplits[x], cp=cps[y])
+      
+      ### Draw Decision Tree
+      draw_dt(model,selection,minSplits[x],cps[y])
     }
   }
   
@@ -163,23 +193,20 @@ draw_dt <- function(model,selection,minSplit,cp){
   
 }
 
-getAccuracy <- function(model,testData,ClassAttributeIndex){
+
+getFormulaName <- function(dataset, ClassAttributeIndex){
   
-  ## Get the predictions
-  predictions <- predict(model,testData,type="class")
+  ## Name of Class attribute
+  ClassAttributeName <- names(dataset)[ClassAttributeIndex]
   
-  ## Compare the true labels of the testing instances with the predictions
-  CorrectWrong <- (predictions==testData[,ClassAttributeIndex])
+  ## Convert name to formula type
+  newClassName <- paste(ClassAttributeName, "~.",sep="")
   
-  ## Get the Number of Correct
-  numCorrect <- length(which(CorrectWrong))
+  ## Return new formula name
+  newClassName
   
-  ## Get the accuracy, i.e. the % of correct
-  accuracy <- numCorrect/dim(testData)[1]
-  
-  ## Return accuracy
-  accuracy
 }
+
 
 getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,minSplit,cp,k){
   
@@ -187,12 +214,6 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
   
   ## Set seed to get same sequence of random values
   set.seed(7)
-  
-  ## Name of Class attribute
-  ClassAttributeName <- names(dataset)[ClassAttributeIndex]
-  
-  ## Convert name to formula type
-  newClassName <- paste(ClassAttributeName, "~.",sep="")
   
   ## Data columns without label
   lastColumn <- ClassAttributeIndex - 1
@@ -205,51 +226,59 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
   while(i < 5){
     
     ## Create the training dataset
+    
     ## get 2/3 of the data for training
     trainIndex <- sample(1:dim(dataset)[1],size=(2/3)*dim(dataset)[1])
     trainData <- dataset[trainIndex,]
     
+    ## TrainData with labels only
+    trainDataLab <- trainData[,ClassAttributeIndex]
+    
     ## TrainData without the labels
     trainDataNoLab <- trainData[,1:lastColumn]
     
-    ## TrainData with labels only
-    trainDataLab <- trainData[,ClassAttributeIndex]
     
     ## Creating the testing data
     #(actually the rest of the data)
     testData <- dataset[-trainIndex,]
+    ## TrainData without the labels
+    testDataNoLab <- testData[,1:lastColumn]
     
+    
+    ## Create model for prediction
     model <- NULL
-    
     if(algorithm == "decisionTree"){
       
+      ## Formula name
+      formulaName <- getFormulaName(dataset, ClassAttributeIndex)
+      
       ## Train a Decision Tree on trainData
-      model<-rpart(formula=as.formula(newClassName), 
+      model <- rpart(formula=as.formula(formulaName), 
                    data=trainData, parms=list(split=selection), 
                    minsplit=minSplit, cp=cp)
       
-      if(i == 0){
-        ## Visualize the Decision Tree using a plot
-        #plot(model,compress=T,uniform=T,margin=0.2,
-             #main=paste("selection criteria = ",selection,
-                        #", minsplit = ",minSplit,", cp = ",cp))
-        #text(model,digits=3,use.n=T)
-        ## Add text legend to plot
-        #text(model, pretty=1, )
-        
-        ## Visualize Decision Tree
-        draw_dt(model,selection,minSplit,cp)
-        
-      }
-      
     }else if(algorithm == "knn"){
       
-      model <- knn(trainDataNoLab, testData, trainDataLab, k)
+      ## Train KNN
+      ### knn is a function from utilities.R
+      model <- knn(trainDataNoLab, testDataNoLab, trainDataLab, k)
       
     }
     
+    
     ## Get accuracy
-    accuracy <- getAccuracy(model,testData,ClassAttributeIndex)
+    if(algorithm == "decisionTree"){
+      
+      ## Accuracy for Decision Tree
+      accuracy <- getAccuracy("decisionTree",model,testData,ClassAttributeIndex)
+      
+    }
+    else if(algorithm == "knn"){
+      
+      ## Accuracy for KNN
+      accuracy <- getAccuracy("knn",model,testData,ClassAttributeIndex)
+      
+    }
     
     ## Add accuracy to total
     totalAccuracy = totalAccuracy + accuracy
@@ -264,6 +293,38 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
   ## Return average accuracy
   averageAccuracy
 }
+
+
+getAccuracy <- function(algorithm,model,testData,ClassAttributeIndex){
+  
+  numCorrect = 0
+  
+  if(algorithm == "decisionTree"){
+    
+    ## Get the predictions
+    predictions <- predict(model,testData,type="class")
+    
+    ## Compare the true labels of the testing instances with the predictions
+    CorrectWrong <- (predictions==testData[,ClassAttributeIndex])
+    
+    ## Get the Number of Correct
+    numCorrect <- length(which(CorrectWrong))
+    
+  }else if(algorithm == "knn"){
+    
+    ## Get sum of correct predictions
+    ### Add 1 for each correct, else 0
+    numCorrect <- sum(ifelse(as.character(model) == as.character(testData[,ClassAttributeIndex]), 1,0))
+    
+  }
+  
+  ## Get the accuracy, i.e. the % of correct
+  accuracy <- numCorrect/dim(testData)[1]
+  
+  ## Return accuracy
+  accuracy
+}
+
 
 normalizeDataset <- function(dataset, discreteAttributes, ClassAttributeIndex){
   
