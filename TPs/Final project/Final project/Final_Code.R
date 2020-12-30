@@ -1,4 +1,6 @@
-## TP Decision Trees
+## Michael Quinto
+
+## Final project code
 
 ## setwd("F:/School/HEG/Data-mining/TPs/Final project")
 
@@ -9,9 +11,10 @@
 
 ### datasetName <- "investing_program_prediction_data.csv"
 ### discreteAttributes <- c(2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27)
+### continuousAttributes <- c(1,3,4,5,6,7,8,9)
 
 ## Exact call
-### runAnalysis(datasetName, colClassesParams, discreteAttributes, 28)
+### runAnalysis(datasetName, colClassesParams, discreteAttributes, continuousAttributes, 28)
 
 
 ## Other commands used
@@ -30,7 +33,7 @@
 ### rpart.plot
 
 
-runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAttributeIndex){
+runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuousAttributes,ClassAttributeIndex){
   
   ## Libraries
   ### rpart
@@ -39,6 +42,8 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAtt
   library(rpart.plot)
   ### class
   library(class)
+  ## package e1071
+  library(e1071)
   
   ## Utilities
   source('utilities/utilities.R', chdir = TRUE)
@@ -46,7 +51,7 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAtt
   
   ##Cette option permet d'afficher les valeurs réelles
   ##au lieu des notations scientifiques
-  #options(scipen=999)
+  options(scipen=999)
   
   #print(colClassesParams)
   
@@ -54,7 +59,13 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAtt
   dataset<- read.table(datasetName,header=T,sep=",", colClasses=colClassesParams)
   
   ## Normalized data
-  datasetNormalized <- normalizeDataset(dataset, discreteAttributes, ClassAttributeIndex)
+  #datasetNormalized <- normalizeDataset(dataset, discreteAttributes, ClassAttributeIndex)
+  
+  ## Information gain & Information gain ratio
+  #execute_information_gain(dataset, discreteAttributes, continuousAttributes, ClassAttributeIndex)
+  
+  ## Naive Bayes
+  execute_nb(dataset, ClassAttributeIndex)
   
   ## Decision Tree using information gain
   #print("Results for Decision Tree using information gain")
@@ -66,34 +77,207 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,ClassAtt
   #print("Results for Decision Tree using gini index")
   #execute_dt(dataset,'gini', ClassAttributeIndex)
   
-  print("")
+  #print("")
   
   ## KNN
-  print("Results for KNN")
-  execute_knn(datasetNormalized, ClassAttributeIndex)
+  #print("Results for KNN")
+  #execute_knn(datasetNormalized, ClassAttributeIndex)
   
   ## Default classifier
-  print("Results for Default Classifier")
-  execute_default_classifier(dataset, ClassAttributeIndex)
+  #print("Results for Default Classifier")
+  #execute_default_classifier(dataset, ClassAttributeIndex)
   
 }
 
 
-## Default Classifier
+## Information gain main function
+execute_information_gain <- function(dataset, discreteAttributes, continuousAttributes, ClassAttributeIndex){
+  
+  ## Information gain for discrete attributes
+  information_gain_discrete(dataset, discreteAttributes, ClassAttributeIndex)
+  
+  ## Information gain for continuous attributes
+  information_gain_continuous(dataset, continuousAttributes, ClassAttributeIndex)
+  
+}
+
+## Information gain of discrete attributes
+information_gain_discrete <- function(dataset, discreteAttributes, ClassAttributeIndex){
+  
+  ## For each discrete attribute
+  for(i in discreteAttributes) {
+    
+    ## Name of discrete attribute
+    print(paste("Nom de la variable : ",names(dataset)[i]))
+    
+    ## Entropy
+    print(paste("Entropie : ",entropy(dataset[,i])))
+    
+    ## Normalized Entropy
+    print(paste("Entropie normalisée : ", normalizedEntropy(dataset, dataset[,i])))
+    
+    ##Conditional Entropy
+    print(paste("Entropie conditionnelle : ",conditionalEntropy(dataset[,i],dataset[,ClassAttributeIndex])))
+    
+    ##Information gain
+    infoGain <- informationGain(dataset[,i],dataset[,ClassAttributeIndex])
+    print(paste("Information gain : ",infoGain))
+    
+    ##Information gain ratio
+    infoGainRatio <- informationGainRatio(dataset[,i],dataset[,ClassAttributeIndex])
+    print(paste("Information gain ratio : ",infoGainRatio))
+    
+    print("")
+    print("--------------------------------------------")
+  }
+  
+}
+
+## Information gain of continuous attributes
+information_gain_continuous <- function(dataset, continuousAttributes, ClassAttributeIndex){
+  
+  ## For each continuous attribute
+  for(j in continuousAttributes) {
+    
+    ## Name of continuous attribute
+    varName <- names(dataset)[j]
+    print(paste("Nom de la variable : ",varName))
+    
+    ## We get the best threshold for which the information gain is the highest
+    bestThreshold <- getBestThreshold(dataset[,j],dataset[,ClassAttributeIndex])
+    
+    ## We compute the information gain for the best threshold
+    infoGain <- informationGain(as.factor(dataset[,j] < bestThreshold), dataset[,ClassAttributeIndex])
+    
+    ## Information gain ratio
+    infoGainRatio <- informationGainRatio(as.factor(dataset[,j] < bestThreshold), dataset[,ClassAttributeIndex])
+    
+    print(paste("Le meilleur seuil a été trouvé pour t = ", bestThreshold))
+    print(paste("Information gain = ",infoGain))
+    print(paste("Information gain ratio = ",infoGainRatio))
+    
+    print("")
+    print("--------------------------------------------")
+  }
+  
+}
+
+## Entropy
+entropy <- function(x) {
+  
+  ## First, we compute the probability of each value for the attribute x
+  p <- prop.table(table(x))
+  
+  ## Then, we compute the products
+  products <- p*log2(p)
+  
+  ## Finally we get the negative of the sum
+  -sum(products)
+  
+}
+
+## Conditional Entropy
+conditionalEntropy <- function(x,y){
+  
+  condProbsYgivenX <- prop.table(table(x,y),1)
+  
+  ## We add 0.00001 to avoid null values --> will not work if null values
+  res <- condProbsYgivenX * log2(condProbsYgivenX+0.00001)
+  
+  res <- -rowSums(res)
+
+  probabilityF <- prop.table(table(x))
+  
+  condEntrYgivenF <- sum(res * probabilityF)
+  
+  condEntrYgivenF
+}
+
+## Normalized Entropy
+normalizedEntropy <- function(dataset,x){
+  
+  ##Récupération du nombre de valeurs unique
+  nbValeurs <- length(unique(x))
+  
+  entropy(x) / log2(nbValeurs)
+  
+}
+
+## Information gain
+informationGain <- function(x,y){
+  
+  entropy(y) - conditionalEntropy(x,y)
+  
+}
+
+## Information gain ratio
+informationGainRatio <- function(x,y){
+  
+  informationGain(x,y) / entropy(x)
+  
+}
+
+## Best threshold function
+getBestThreshold <- function(x,y) {
+  
+  ## Get all distinct values for the attribute x and sort them
+  sortedUnique <- sort(unique(x))
+  
+  ## Number of unique values
+  nbValeurs <- length(sortedUnique)
+  
+  bestThreshold <- 1
+  bestInfoGain <- 0
+  
+  ## For each value
+  for(i in sortedUnique){
+    
+    ## Compute the information gain for threshold t = i
+    infoGain <- informationGain(as.factor(x < i), y)
+    
+    ## Keep the highest information gain
+    if(infoGain > bestInfoGain){
+      bestThreshold = i
+      bestInfoGain = infoGain
+    }
+    
+  }
+  
+  ## Return best threshold
+  bestThreshold
+  
+}
+
+
+## Default Classifier main function
 execute_default_classifier <- function(dataset, ClassAttributeIndex){
- 
+  
   ## Get average accuracy for default classifier
   averageAccuracy <- getAverageAccuracy("default", dataset, ClassAttributeIndex, , , , )
   
   ## Display average accuracy
-  print(paste("Average accuracy for : ",averageAccuracy))
-   
+  print(paste("Average accuracy for Default Classifier: ",averageAccuracy))
+  
 }
 
 
-## KNN
-execute_knn <- function(datasetNormalized, ClassAttributeIndex){
+## Naive Bayes main function
+execute_nb <- function(dataset, ClassAttributeIndex){
+  
+  formulaName <- getFormulaName(dataset, ClassAttributeIndex)
+  
+  ## Get average accuracy for Naive Bayes
+  averageAccuracy <- getAverageAccuracy("naive", dataset, ClassAttributeIndex, , , , )
+  
+  ## Display average accuracy
+  print(paste("Average accuracy for Naive Bayes : ",averageAccuracy))
+}
 
+
+
+## KNN main function
+execute_knn <- function(datasetNormalized, ClassAttributeIndex){
+  
   print("")
   
   ## Nearest neighbors
@@ -129,7 +313,7 @@ execute_knn <- function(datasetNormalized, ClassAttributeIndex){
     visualizeKNN(datasetNormalized,index1,index2,kValues[k], 100)
     
   }
-    
+  
 }
 
 
@@ -263,17 +447,23 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
     testDataNoLab <- testData[,1:lastColumn]
     
     
+    ## Formula name
+    formulaName <- getFormulaName(dataset, ClassAttributeIndex)
+    
+    
     ## Create model for prediction
     model <- NULL
+    accuracy = 0
+    
     if(algorithm == "decisionTree"){
-      
-      ## Formula name
-      formulaName <- getFormulaName(dataset, ClassAttributeIndex)
       
       ## Train a Decision Tree on trainData
       model <- rpart(formula=as.formula(formulaName), 
-                   data=trainData, parms=list(split=selection), 
-                   minsplit=minSplit, cp=cp)
+                     data=trainData, parms=list(split=selection), 
+                     minsplit=minSplit, cp=cp)
+      
+      ## Accuracy for Decision Tree
+      accuracy <- getAccuracy("decisionTree",model,,testData,ClassAttributeIndex)
       
     }else if(algorithm == "knn"){
       
@@ -281,20 +471,16 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
       ### knn is a function from utilities.R
       model <- knn(trainDataNoLab, testDataNoLab, trainDataLab, k)
       
-    }
-  
-    
-    ## Get accuracy
-    if(algorithm == "decisionTree"){
-      
-      ## Accuracy for Decision Tree
-      accuracy <- getAccuracy("decisionTree",model,,testData,ClassAttributeIndex)
-      
-    }
-    else if(algorithm == "knn"){
-      
       ## Accuracy for KNN
       accuracy <- getAccuracy("knn",model,,testData,ClassAttributeIndex)
+      
+    }else if(algorithm == "naive"){
+      
+      #Train a Naive Bayes
+      model <- naiveBayes(formula=as.formula(formulaName),data=trainData)
+      
+      ## Accuracy for Naive Bayes
+      accuracy <- getAccuracy("naive",model,,testData,ClassAttributeIndex)
       
     }else if(algorithm == "default"){
       
@@ -321,17 +507,18 @@ getAccuracy <- function(algorithm,model,trainData,testData,ClassAttributeIndex){
   
   numCorrect = 0
   
-  if(algorithm == "decisionTree" || algorithm == "default"){
+  if(algorithm == "decisionTree" || algorithm == "naive" || algorithm == "default"){
     
-    if(algorithm == "decisionTree"){
-      
-      ## Get the predictions
-      predictions <- predict(model,testData,type="class")
-      
-    }else{
+    if(algorithm == "default" ){
       
       #Get the majority class which will be used to predict
       predictions <- names(which.max(table(trainData[,ClassAttributeIndex])))
+      
+    }else{
+      
+      ## For Decision Tree and Naive Bayes
+      ## Get the predictions
+      predictions <- predict(model,testData,type="class")
       
     }
     
