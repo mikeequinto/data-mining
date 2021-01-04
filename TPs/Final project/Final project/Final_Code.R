@@ -217,8 +217,20 @@ execute_mcnemar <- function(dataset, datasetNormalized, ClassAttributeIndex){
   dt_vs_knn <- get_contingency_table("decisionTree", dt_correct_wrong_1, dt_correct_wrong_2, dt_correct_wrong_3,
                                     "knn", knn_correct_wrong_1, knn_correct_wrong_2, knn_correct_wrong_3)
   
+  ## KNN vs Naive Bayes
+  knn_vs_nb <- get_contingency_table("knn", knn_correct_wrong_1, knn_correct_wrong_2, knn_correct_wrong_3,
+                                    "naive", nb_correct_wrong_1, nb_correct_wrong_2, nb_correct_wrong_3)
+  
   ## Decision Tree vs Default Classifier
   dt_vs_dc <- get_contingency_table("decisionTree", dt_correct_wrong_1, dt_correct_wrong_2, dt_correct_wrong_3,
+                                    "default", dc_correct_wrong_1, dc_correct_wrong_2, dc_correct_wrong_3)
+  
+  ## Naive Bayes vs Default Classifier
+  nb_vs_dc <- get_contingency_table("naive", nb_correct_wrong_1, nb_correct_wrong_2, nb_correct_wrong_3,
+                                    "default", dc_correct_wrong_1, dc_correct_wrong_2, dc_correct_wrong_3)
+  
+  ## KNN vs Default Classifier
+  knn_vs_dc <- get_contingency_table("decisionTree", knn_correct_wrong_1, knn_correct_wrong_2, knn_correct_wrong_3,
                                     "default", dc_correct_wrong_1, dc_correct_wrong_2, dc_correct_wrong_3)
   
   
@@ -237,9 +249,21 @@ execute_mcnemar <- function(dataset, datasetNormalized, ClassAttributeIndex){
   print(dt_vs_knn)
   print(mcnemar.test(dt_vs_knn))
   
+  print("KNN vs Naive Bayes")
+  print(knn_vs_nb)
+  print(mcnemar.test(knn_vs_nb))
+  
   print("Decision Tree vs Default Classifier")
   print(dt_vs_dc)
   print(mcnemar.test(dt_vs_dc))
+  
+  print("Naive Bayes vs Default Classifier")
+  print(nb_vs_dc)
+  print(mcnemar.test(nb_vs_dc))
+  
+  print("KNN vs Default Classifier")
+  print(knn_vs_dc)
+  print(mcnemar.test(knn_vs_dc))
   
 }
 
