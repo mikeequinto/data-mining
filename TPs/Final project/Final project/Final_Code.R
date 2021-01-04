@@ -205,11 +205,99 @@ execute_mcnemar <- function(dataset, datasetNormalized, ClassAttributeIndex){
   dc_cross_validation_accuracy <- get_cross_validation_accuracy(dc_correct_wrong_1, dc_correct_wrong_2, dc_correct_wrong_3)
   
   
+  ## Create the tables containing classification differences between algorithms
+  ### we will get a vector with : 
+  ### algo1_wrong_algo2_wrong, algo1_wrong_algo2_correct, algo1_correct_algo2_wrong, algo1_correct_algo2_correct
+  
+  ## Decision Tree vs Naive Bayes
+  dt_vs_nb <- get_contingency_table("decisionTree", dt_correct_wrong_1, dt_correct_wrong_2, dt_correct_wrong_3,
+                        "naive", nb_correct_wrong_1, nb_correct_wrong_2, nb_correct_wrong_3)
+  
+  ## Decision Tree vs KNN
+  dt_vs_knn <- get_contingency_table("decisionTree", dt_correct_wrong_1, dt_correct_wrong_2, dt_correct_wrong_3,
+                                    "knn", knn_correct_wrong_1, knn_correct_wrong_2, knn_correct_wrong_3)
+  
+  ## Decision Tree vs Default Classifier
+  dt_vs_dc <- get_contingency_table("decisionTree", dt_correct_wrong_1, dt_correct_wrong_2, dt_correct_wrong_3,
+                                    "default", dc_correct_wrong_1, dc_correct_wrong_2, dc_correct_wrong_3)
+  
+  
   ## Display average precisions
   print(paste("Précision moyenne pour l'algorithme Decision Tree : ", dt_cross_validation_accuracy))
   print(paste("Précision moyenne pour l'algorithme Naive Bayes : ", nb_cross_validation_accuracy))
   print(paste("Précision moyenne pour l'algorithme KNN : ", knn_cross_validation_accuracy))
   print(paste("Précision moyenne pour le Default Classifier : ", dc_cross_validation_accuracy))
+  
+  ## Display p-value we get with McNemar test
+  print("Decision Tree vs Naive Bayes")
+  print(dt_vs_nb)
+  print(mcnemar.test(dt_vs_nb))
+  
+  print("Decision Tree vs KNN")
+  print(dt_vs_knn)
+  print(mcnemar.test(dt_vs_knn))
+  
+  print("Decision Tree vs Default Classifier")
+  print(dt_vs_dc)
+  print(mcnemar.test(dt_vs_dc))
+  
+}
+
+
+## Create contingency table
+get_contingency_table <- function(algorithm_1, algo1_correct_wrong_1, algo1_correct_wrong_2, algo1_correct_wrong_3,
+                      algorithm_2, algo2_correct_wrong_1, algo2_correct_wrong_2, algo2_correct_wrong_3){
+  
+  ## Create vectors with all parts
+  algo1_correct_wrong_all <- c(algo1_correct_wrong_1, algo1_correct_wrong_2, algo1_correct_wrong_3)
+  algo2_correct_wrong_all <- c(algo2_correct_wrong_1, algo2_correct_wrong_2, algo2_correct_wrong_3)
+  
+  ## Initialize the values which we will return for the McNemar table
+  algo1_wrong_algo2_wrong = 0
+  algo1_wrong_algo2_correct = 0
+  algo1_correct_algo2_wrong = 0
+  algo1_correct_algo2_correct = 0
+  
+  ## For each part 
+  for(i in 1:length(algo1_correct_wrong_all)){
+    
+    algo1_current_part <- algo1_correct_wrong_all[i]
+    algo2_current_part <- algo2_correct_wrong_all[i]
+    
+    ## For each instance in part
+    for(j in 1:length(algo1_current_part)){
+      
+      if(algo1_current_part[j]){ ## if algo 1 correct
+        
+        if(algo2_current_part[j]){ ## algo 1 correct and algo 2 correct
+          
+          algo1_correct_algo2_correct = algo1_correct_algo2_correct + 1
+          
+        }else{ ## algo 1 correct but algo 2 wrong
+          
+          algo1_correct_algo2_wrong = algo1_correct_algo2_wrong + 1
+          
+        }
+        
+      }else{ ## algo1 wrong
+        
+        if(algo2_current_part[j]){ ## algo 1 wrong but algo 2 correct
+          
+          algo1_wrong_algo2_correct = algo1_wrong_algo2_correct + 1
+          
+        }else{
+          
+          algo1_wrong_algo2_wrong = algo1_wrong_algo2_wrong + 1
+          
+        }
+      }
+    }
+  }
+  
+  matrix(c(algo1_wrong_algo2_wrong, algo1_wrong_algo2_correct, algo1_correct_algo2_wrong, algo1_correct_algo2_correct),
+         nrow = 2,
+         dimnames = list("Classifier-B" = c("#wrong", "#correct"),
+                         "Classifier-A" = c("#wrong", "#correct")))
   
 }
 
@@ -236,12 +324,12 @@ get_cross_validation_accuracy <- function(CorrectWrong_1, CorrectWrong_2, Correc
 ## Get correct / wrong predictions
 get_correct_wrong <- function(algorithm, trainData, testData, ClassAttributeIndex){
   
-  ## Train the models for each part
+  ## Train the model depending on the algorithm
   model <- trainModel(algorithm, trainData, testData, ClassAttributeIndex) 
   
   if(algorithm == "decisionTree" || algorithm == "naive" || algorithm == "default"){
     
-    ## Get predictions for each part
+    ## Get predictions
     if(algorithm == "default"){
       
       predictions <- names(which.max(table(trainData[,ClassAttributeIndex])))
