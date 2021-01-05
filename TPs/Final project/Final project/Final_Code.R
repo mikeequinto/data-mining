@@ -13,23 +13,11 @@
 ### discreteAttributes <- c(2,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27)
 ### continuousAttributes <- c(1,3,4,5,6,7,8,9)
 
+
 ## Exact call
 ### runAnalysis(datasetName, colClassesParams, discreteAttributes, continuousAttributes, 28)
 
-
-## Other commands used
-
-## Final model Decision Tree information gain
-### final_dt_information<-rpart(formula=InvType~.,data=myData, parms=list(split='information'),minsplit=50, cp=0.01)
-### draw_dt(final_dt_information,'information',5,0.01)
-
-## Final model Decision Tree gini index
-### final_dt_gini<-rpart(formula=InvType~.,data=myData, parms=list(split='gini'),minsplit=5, cp=0.01)
-### draw_dt(final_dt_gini,'gini',5,0.01)
-
-
 ## Other packages used (that need to be installed before executing the exact call)
-
 ### rpart.plot
 
 
@@ -49,11 +37,8 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuo
   source('utilities/utilities.R', chdir = TRUE)
   source('utilities/knn.R', chdir = TRUE)
   
-  ##Cette option permet d'afficher les valeurs réelles
-  ##au lieu des notations scientifiques
+  ## Lets us observe the real values instead of scientific notations
   options(scipen=999)
-  
-  #print(colClassesParams)
   
   ## Read data
   dataset<- read.table(datasetName,header=T,sep=",", colClasses=colClassesParams)
@@ -67,6 +52,8 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuo
   ## Naive Bayes
   #print("Results for Naive Bayes")
   #execute_nb(dataset, ClassAttributeIndex)
+  
+  #print("")
   
   ## Decision Tree using information gain
   #print("Results for Decision Tree using information gain")
@@ -85,12 +72,16 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuo
   #execute_knn(datasetNormalized, ClassAttributeIndex)
   
   ## Default classifier
-  #print("Results for Default Classifier")
-  #execute_default_classifier(dataset, ClassAttributeIndex)
-  
+  print("Results for Default Classifier")
+  execute_default_classifier(dataset, ClassAttributeIndex)
   
   ## McNemar
+  print("Results for McNemar")
   execute_mcnemar(dataset, datasetNormalized, ClassAttributeIndex)
+  
+  ## Best algorithm model Decision Tree
+  final_dt_information<-rpart(formula=InvType~.,data=myData, parms=list(split='information'),minsplit=5, cp=0.01)
+  draw_dt(final_dt_information,'information',5,0.01)
   
 }
 
@@ -98,50 +89,8 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuo
 ## McNemar main function
 execute_mcnemar <- function(dataset, datasetNormalized, ClassAttributeIndex){
   
-  print("McNemar let's go")  
-  
-  
-  ## Validation croisée à faire pour chaque algorithme et chaque hyperparamètre
-  ### à la place de du hold out --> séparation aléatoire du dataset 5 fois
-  
-  ### Pour faire la validation croisée, on doit séparer notre dataset en 3 part égales
-  ### 3 parts car c'est écrit dans les consignes du projet final ("validation croisée 3 fois")
-  
-  ### chaque part devient le testData à tour de rôle
-  ### les deux autres parts deviennent des trainData qui vont servir pour créer le modèle
-  ### la précision sera calculé pour le testData sur le modèle
-  ### on effectue ceci 3 fois (pour chaque part) pour avoir la précision moyenne
-  
-  ### la précision moyenne est la moyenne des précisions obtenus pour les 3 parts
-  ### comme chaque part/modèle est testé 2 fois(vu qu'il y a 2 testData)
-  ### on aura 6 précisions sur lesquels on devra faire la moyenne
-  
-  ## La validation croisée nous permettra d'obtenir les précisions pour les algorithmes
-  ### ces précisions seront utilisées pour le test mcNemar dans le cas où p-value est plus petit que alpha
-  ### alpha à définir
-  
-  
-  ## Test mcnemar
-  ### pour obtenir les valeurs du tableau de contingence
-  ### il faut d'abord faire les validation croisées pour les deux algorithmes qu'on compare
-  ### il est donc important qu'on ait les mêmes parts de données pour les deux algorithmes
-  ### afin d'avoir les résultats des prédictions pour chaque part de données pour les deux algorithmes
-  ### pour chaque prédiction, donc instance, on récupère la prédiction de l'algorithme A et B
-  ### puis on met à jour le tableau de contingence
-  
-  ### ce tableau de contingence sera passé en paramètre pour le test mcnemar
-  ### ce test va nous retourner une valeur p-value
-  ### si cette valeur est plus petite qu'alpha, une valeur à définir (0.05 ou 0.01), ca veut dire que les algos sont significativement différents
-  ### dans ce cas la, on doit regarder les précisions moyennes, faites durant la validation croisée, des deux algos
-  ### on accorde 1 point pour celui qui a une précision plus élevée et 0 pour l'autre
-  
-  ### si p-value est plus grande qu'alpha, cela veut dire que les algos sont pareils
-  ### on accorde 0.5 aux deux algos
-  
-  
+  ## Set seed to get the same sequence of random values
   set.seed(7)
-  
-  lastColumn <- ClassAttributeIndex - 1
   
   ## Divide the dataset into 3 parts -> each part will become a testData 
   
@@ -606,7 +555,6 @@ execute_nb <- function(dataset, ClassAttributeIndex){
 }
 
 
-
 ## KNN main function
 execute_knn <- function(datasetNormalized, ClassAttributeIndex){
   
@@ -749,9 +697,6 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
   ## Set seed to get same sequence of random values
   set.seed(7)
   
-  ## Data columns without label
-  lastColumn <- ClassAttributeIndex - 1
-  
   ## Total for accuracy to get average
   totalAccuracy = 0
   
@@ -759,66 +704,8 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
   i = 0
   while(i < 5){
     
-    ## Create the training dataset
-    
-    ## get 2/3 of the data for training
-    trainIndex <- sample(1:dim(dataset)[1],size=(2/3)*dim(dataset)[1])
-    trainData <- dataset[trainIndex,]
-    
-    ## TrainData with labels only
-    trainDataLab <- trainData[,ClassAttributeIndex]
-    
-    ## TrainData without the labels
-    trainDataNoLab <- trainData[,1:lastColumn]
-    
-    
-    ## Creating the testing data
-    #(actually the rest of the data)
-    testData <- dataset[-trainIndex,]
-    ## TrainData without the labels
-    testDataNoLab <- testData[,1:lastColumn]
-    
-    
-    ## Formula name
-    formulaName <- getFormulaName(dataset, ClassAttributeIndex)
-    
-    
-    ## Create model for prediction
-    model <- NULL
-    accuracy = 0
-    
-    if(algorithm == "decisionTree"){
-      
-      ## Train a Decision Tree on trainData
-      model <- rpart(formula=as.formula(formulaName), 
-                     data=trainData, parms=list(split=selection), 
-                     minsplit=minSplit, cp=cp)
-      
-      ## Accuracy for Decision Tree
-      accuracy <- getAccuracy("decisionTree",model,,testData,ClassAttributeIndex)
-      
-    }else if(algorithm == "knn"){
-      
-      ## Train KNN
-      ### knn is a function from utilities.R
-      model <- knn(trainDataNoLab, testDataNoLab, trainDataLab, k)
-      
-      ## Accuracy for KNN
-      accuracy <- getAccuracy("knn",model,,testData,ClassAttributeIndex)
-      
-    }else if(algorithm == "naive"){
-      
-      #Train a Naive Bayes
-      model <- naiveBayes(formula=as.formula(formulaName),data=trainData)
-      
-      ## Accuracy for Naive Bayes
-      accuracy <- getAccuracy("naive",model,,testData,ClassAttributeIndex)
-      
-    }else if(algorithm == "default"){
-      
-      ## Accuracy for Default Classifier
-      accuracy <- getAccuracy("default",,trainData,testData,ClassAttributeIndex)
-    }
+    ## Get the accuracy for each test
+    accuracy <- getAccuracy(algorithm, dataset, ClassAttributeIndex, selection, minSplit, cp, k)
     
     ## Add accuracy to total
     totalAccuracy = totalAccuracy + accuracy
@@ -835,22 +722,60 @@ getAverageAccuracy <- function(algorithm,dataset,ClassAttributeIndex,selection,m
 }
 
 
-getAccuracy <- function(algorithm,model,trainData,testData,ClassAttributeIndex){
+getAccuracy <- function(algorithm, dataset, ClassAttributeIndex, selection, minSplit, cp, k){
+  
+  ## Create the training dataset
+  
+  ## get 2/3 of the data for training
+  trainIndex <- sample(1:dim(dataset)[1],size=(2/3)*dim(dataset)[1])
+  trainData <- dataset[trainIndex,]
+  
+  ## TrainData with labels only
+  trainDataLab <- trainData[,ClassAttributeIndex]
+  
+  ## TrainData without the labels
+  trainDataNoLab <- trainData[,-ClassAttributeIndex]
+  
+  
+  ## Creating the testing data
+  #(actually the rest of the data)
+  testData <- dataset[-trainIndex,]
+  ## TrainData without the labels
+  testDataNoLab <- testData[,-ClassAttributeIndex]
+  
+  
+  ## Initialize model
+  model <- NULL
   
   numCorrect = 0
   
   if(algorithm == "decisionTree" || algorithm == "naive" || algorithm == "default"){
     
-    if(algorithm == "default" ){
+    ## Formula name
+    formulaName <- getFormulaName(dataset, ClassAttributeIndex)
+    
+    if(algorithm == "decisionTree"){
+      
+      ## Train a Decision Tree on trainData
+      model <- rpart(formula=as.formula(formulaName), 
+                    data=trainData, parms=list(split=selection), 
+                    minsplit=minSplit, cp=cp)
+      
+      ## Get the predictions
+      predictions <- predict(model,testData,type="class")
+      
+    }else if(algorithm == "naive"){
+      
+      #Train a Naive Bayes
+      model <- naiveBayes(formula=as.formula(formulaName),data=trainData)
+      
+      ## Get the predictions
+      predictions <- predict(model,testData,type="class")
+      
+    }else { ## Default Classifier
       
       #Get the majority class which will be used to predict
       predictions <- names(which.max(table(trainData[,ClassAttributeIndex])))
-      
-    }else{
-      
-      ## For Decision Tree and Naive Bayes
-      ## Get the predictions
-      predictions <- predict(model,testData,type="class")
       
     }
     
@@ -861,6 +786,10 @@ getAccuracy <- function(algorithm,model,trainData,testData,ClassAttributeIndex){
     numCorrect <- length(which(CorrectWrong))
     
   }else if(algorithm == "knn"){
+    
+    ## Train KNN
+    ### knn is a function from utilities.R
+    model <- knn(trainDataNoLab, testDataNoLab, trainDataLab, k)
     
     ## Get sum of correct predictions
     ### Add 1 for each correct, else 0
