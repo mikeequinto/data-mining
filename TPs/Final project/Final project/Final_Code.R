@@ -47,29 +47,29 @@ runAnalysis <- function(datasetName,colClassesParams,discreteAttributes,continuo
   datasetNormalized <- normalizeDataset(dataset, discreteAttributes, ClassAttributeIndex)
   
   ## Information gain & Information gain ratio
-  #execute_information_gain(dataset, discreteAttributes, continuousAttributes, ClassAttributeIndex)
+  execute_information_gain(dataset, discreteAttributes, continuousAttributes, ClassAttributeIndex)
   
   ## Naive Bayes
-  #print("Results for Naive Bayes")
-  #execute_nb(dataset, ClassAttributeIndex)
+  print("Results for Naive Bayes")
+  execute_nb(dataset, ClassAttributeIndex)
   
-  #print("")
+  print("")
   
   ## Decision Tree using information gain
-  #print("Results for Decision Tree using information gain")
-  #execute_dt(dataset,'information', ClassAttributeIndex)
+  print("Results for Decision Tree using information gain")
+  execute_dt(dataset,'information', ClassAttributeIndex)
   
-  #print("")
+  print("")
   
   ## Decision Tree using gini index
-  #print("Results for Decision Tree using gini index")
-  #execute_dt(dataset,'gini', ClassAttributeIndex)
+  print("Results for Decision Tree using gini index")
+  execute_dt(dataset,'gini', ClassAttributeIndex)
   
-  #print("")
+  print("")
   
   ## KNN
-  #print("Results for KNN")
-  #execute_knn(datasetNormalized, ClassAttributeIndex)
+  print("Results for KNN")
+  execute_knn(datasetNormalized, ClassAttributeIndex)
   
   ## Default classifier
   print("Results for Default Classifier")
